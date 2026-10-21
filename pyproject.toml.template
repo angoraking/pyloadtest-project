@@ -1,0 +1,13 @@
+[project]
+name = "pyloadtest"
+version = "0.1.1"
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+
+dependencies = [
+    {DEPENDENCIES}
+]
+
+[tool.uv]
+# Only a virtual environment for the scripts; never build or install this repo.
+package = false
