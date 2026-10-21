@@ -52,7 +52,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.generator.outputs.matrix) }}
     steps:
-      # Needed to get gen_pyproject_toml.py and pyproject.toml.template onto the runner
+      # Needed to get run_load_test.py and pyproject.toml.template onto the runner
       - uses: "actions/checkout@v7" # https://github.com/marketplace/actions/checkout
       - uses: "actions/setup-python@v7" # https://github.com/marketplace/actions/setup-python
         with:
@@ -61,12 +61,7 @@ jobs:
         uses: "astral-sh/setup-uv@v10.3.0" # https://github.com/marketplace/actions/setup-uv (pin the full version)
         with:
           enable-cache: false
-      - name: "Generate pyproject.toml"
-        shell: bash
-        run: |
-          python gen_pyproject_toml.py
-          cat pyproject.toml
       - name: "Install libraries"
         shell: bash
-        # Recreates .venv and runs uv sync --no-cache, N times
-        run: python install_libraries.py
+        # For each library: render pyproject.toml, recreate .venv, uv sync --no-cache
+        run: python run_load_test.py
