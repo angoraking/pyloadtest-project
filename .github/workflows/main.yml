@@ -66,10 +66,7 @@ jobs:
         run: |
           python gen_pyproject_toml.py
           cat pyproject.toml
-      - name: "Create venv"
-        shell: bash
-        run: uv venv .venv --python "${{ matrix.python-version }}"
       - name: "Install libraries"
         shell: bash
-        # --no-cache: always download from the index, never reuse uv's cache
-        run: uv sync --no-cache
+        # Recreates .venv and runs uv sync --no-cache, N times
+        run: python install_libraries.py
