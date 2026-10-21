@@ -1,0 +1,66 @@
+# comprehensive github action yml reference: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
+#
+# Dry-run CI: only verifies that runners start and can set up Python + uv.
+# A lightweight "generator" job decides which (os, python-version) jobs to launch,
+# so unselected Windows jobs are never created (no VM boot cost, no "skipped" noise).
+# - ubuntu-latest: always launched (100%)
+# - windows-latest: each combination launched with WINDOWS_PROBABILITY (50%)
+
+---
+name: CI
+
+on:
+  workflow_dispatch: # Manual trigger only, from the GitHub UI
+
+jobs:
+  generator:
+    name: "Generate matrix"
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.gen.outputs.matrix }}
+    steps:
+      - name: "Roll dice for matrix"
+        id: gen
+        shell: python
+        env:
+#          PYTHON_VERSIONS: "3.11,3.12,3.13,3.14"
+          PYTHON_VERSIONS: "3.11,3.12"
+          WINDOWS_PROBABILITY: "0.5"
+        run: |
+          import json, os, random
+
+          versions = os.environ["PYTHON_VERSIONS"].split(",")
+          win_prob = float(os.environ["WINDOWS_PROBABILITY"])
+
+          include = [{"os": "ubuntu-latest", "python-version": v} for v in versions]
+          include += [
+              {"os": "windows-latest", "python-version": v}
+              for v in versions
+              if random.random() < win_prob
+          ]
+
+          matrix = json.dumps({"include": include})
+          print(matrix)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"matrix={matrix}\n")
+
+  tests:
+    name: "${{ matrix.os }} Python ${{ matrix.python-version }}"
+    needs: generator
+    runs-on: "${{ matrix.os }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generator.outputs.matrix) }}
+    steps:
+      - uses: "actions/setup-python@v7" # https://github.com/marketplace/actions/setup-python
+        with:
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install uv"
+        uses: "astral-sh/setup-uv@v10.3.0" # https://github.com/marketplace/actions/setup-uv (pin the full version)
+        with:
+          enable-cache: false
+      - name: "Dry run"
+        shell: bash
+        run: |
+          python --version
+          uv --version
