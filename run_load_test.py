@@ -32,12 +32,36 @@ dir_venv = dir_here / ".venv"
 N = 3
 
 LIBRARIES = [
-    {"name": "vislog", "prob": 1},
+    # --- high-traffic libraries
+    # {"name": "boto-session-manager", "prob": 0.0},
+    # {"name": "s3pathlib", "prob": 0.0},
+    # {"name": "uszipcode", "prob": 0.0},
+    # {"name": "sqlalchemy-mate", "prob": 0.0},
+    # {"name": "func-args", "prob": 0.0},
+    # {"name": "iterproxy", "prob": 0.0},
+    # {"name": "pathlib-mate", "prob": 0.0},
+    # --- medium-traffic libraries
+    {"name": "pynamodb-mate", "prob": 1.0},
+    {"name": "pynamodb-session-manager", "prob": 1.0},
+    {"name": "atlas-doc-parser", "prob": 1.0},
+    {"name": "aws-lbd-art-builder-core", "prob": 1.0},
+    {"name": "aws-lbd-art-builder-uv", "prob": 1.0},
+    {"name": "cdk-mate", "prob": 1.0},
+    {"name": "cookiecutter-maker", "prob": 1.0},
+    {"name": "home-secret-toml", "prob": 1.0},
+    {"name": "s3vectorm", "prob": 1.0},
+    {"name": "sqlalchemy-upsert-kit", "prob": 1.0},
+    {"name": "sayt2", "prob": 1.0},
+    {"name": "windtalker", "prob": 1.0},
+    # --- low-traffic libraries
+    {"name": "aws-sdk-polars", "prob": 0.5},
+    {"name": "configcraft", "prob": 0.5},
+    {"name": "polars-writer", "prob": 0.5},
+    {"name": "s3manifesto", "prob": 0.5},
+    {"name": "simple-aws-lambda", "prob": 0.5},
+    {"name": "simple-aws-ssm-parameter-store", "prob": 0.5},
     {"name": "soft-deps", "prob": 0.5},
-    {"name": "boto-session-manager", "prob": 1},
-    {"name": "cdk-mate", "prob": 1},
-    {"name": "simple-aws-lambda", "prob": 1},
-    {"name": "simple-aws-ssm-parameter-store", "prob": 1},
+    {"name": "vislog", "prob": 0.5},
 ]
 
 # If this script itself runs from .venv, sys.executable is deleted with it;
