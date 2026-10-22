@@ -52,7 +52,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.generator.outputs.matrix) }}
     steps:
-      # Needed to get run_load_test.py and pyproject.toml.template onto the runner
+      # Needed to get run_load_test.py onto the runner
       - uses: "actions/checkout@v7" # https://github.com/marketplace/actions/checkout
       - uses: "actions/setup-python@v7" # https://github.com/marketplace/actions/setup-python
         with:
@@ -63,5 +63,5 @@ jobs:
           enable-cache: false
       - name: "Install libraries"
         shell: bash
-        # For each library: render pyproject.toml, recreate .venv, uv sync --no-cache
+        # For each library: recreate .venv, uv pip install --no-deps --no-cache
         run: python run_load_test.py
