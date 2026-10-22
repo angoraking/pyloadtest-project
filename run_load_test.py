@@ -3,7 +3,7 @@
 """
 Install each library from PyPI into a brand new ``.venv``, one library at a time.
 
-For every library picked by its probability (0-1), this script:
+For every library picked by its probability (0-1), this script quietly:
 
 1. removes ``.venv``
 2. ``uv venv`` a new ``.venv`` with the interpreter that runs this script
@@ -11,6 +11,7 @@ For every library picked by its probability (0-1), this script:
    dependencies, always downloaded from the index
 
 The whole thing is repeated ``N`` times, each round rolls the dice again.
+Only a short line per install is printed, a failed command also prints its output.
 Only uses the standard library.
 
 Usage::
@@ -44,17 +45,11 @@ LIBRARIES = [
 python_executable = getattr(sys, "_base_executable", sys.executable)
 
 
-def log(msg: str):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-
-def run(args: list[str]) -> float:
+def run(args: list[str]):
     """
-    Run a command, print its output, return the elapsed time in seconds.
+    Run a command quietly; only print its output if it fails.
     """
-    log(f"$ {' '.join(args)}")
-    start = time.perf_counter()
-    # uv writes most of its output to stderr, merge it so everything is printed in order
+    # uv writes most of its output to stderr, merge it so it is printed in order
     result = subprocess.run(
         args,
         cwd=dir_here,
@@ -62,34 +57,22 @@ def run(args: list[str]) -> float:
         stderr=subprocess.STDOUT,
         text=True,
     )
-    elapsed = time.perf_counter() - start
-    for line in result.stdout.splitlines():
-        print(f"    {line}", flush=True)
     if result.returncode != 0:
-        log(f"failed with exit code {result.returncode} in {elapsed:.2f}s")
+        for line in result.stdout.splitlines():
+            print(f"    {line}", flush=True)
         raise subprocess.CalledProcessError(result.returncode, args)
-    log(f"done in {elapsed:.2f}s")
-    return elapsed
 
 
-def pick_libraries(libraries: list[dict]) -> list[str]:
+def install_library(name: str):
     """
-    Roll the dice for each library, return the names that are picked.
-    """
-    return [lib["name"] for lib in libraries if random.random() < lib["prob"]]
-
-
-def install_library(name: str) -> dict[str, float]:
-    """
-    Install one library into a fresh .venv, return the time of each uv step.
+    Install one library into a fresh .venv.
     """
     # Start from an empty venv every time
-    log(f"remove {dir_venv.name}")
     shutil.rmtree(dir_venv, ignore_errors=True)
-    venv_time = run(["uv", "venv", str(dir_venv), "--python", python_executable])
+    run(["uv", "venv", str(dir_venv), "--python", python_executable])
     # --no-deps: only the library itself, not its dependencies
     # --no-cache: always download from the index, never reuse uv's cache
-    install_time = run(
+    run(
         [
             "uv", "pip", "install",
             "--no-deps", "--no-cache",
@@ -97,33 +80,46 @@ def install_library(name: str) -> dict[str, float]:
             name,
         ]
     )
-    return {"venv": venv_time, "install": install_time}
 
 
 def main():
-    log(f"python: {sys.version.split()[0]} ({python_executable})")
-    log(f"rounds: {N}")
-    records = []  # (round, library, times)
-    for i in range(1, N + 1):
-        names = pick_libraries(LIBRARIES)
-        log(f"===== round {i}/{N}, picked {names} =====")
-        for name in names:
-            log(f"----- install {name} -----")
-            records.append((i, name, install_library(name)))
+    # Windows runners default to a legacy code page that cannot print emoji
+    sys.stdout.reconfigure(encoding="utf-8")
 
-    log("===== summary =====")
-    for i, name, times in records:
-        log(
-            f"round {i} {name:<32} "
-            f"uv venv {times['venv']:.2f}s, uv pip install {times['install']:.2f}s"
-        )
-    if records:
-        total_venv = sum(times["venv"] for _, _, times in records)
-        total_install = sum(times["install"] for _, _, times in records)
-        log(
-            f"{len(records)} installs, "
-            f"total uv venv {total_venv:.2f}s, total uv pip install {total_install:.2f}s"
-        )
+    n_libs = len(LIBRARIES)
+    n_total = N * n_libs
+    print(f"python {sys.version.split()[0]}, {N} rounds x {n_libs} libraries", flush=True)
+
+    n_ok, n_failed = 0, 0
+    start = time.perf_counter()
+    for i in range(1, N + 1):
+        print(f"\n{'=' * 20} round {i}/{N} {'=' * 20}", flush=True)
+        for j, lib in enumerate(LIBRARIES, start=1):
+            # Skipped libraries print nothing, but still count towards j and k
+            if random.random() >= lib["prob"]:
+                continue
+            k = (i - 1) * n_libs + j
+            name = lib["name"]
+            print(f"{'-' * 8} {j}/{n_libs} | {k}/{n_total} | {name}", flush=True)
+            t = time.perf_counter()
+            try:
+                install_library(name)
+            except subprocess.CalledProcessError:
+                n_failed += 1
+                print(f"❌ {name} failed ({time.perf_counter() - t:.2f}s)", flush=True)
+            else:
+                n_ok += 1
+                print(f"✅ {name} ({time.perf_counter() - t:.2f}s)", flush=True)
+
+    elapsed = time.perf_counter() - start
+    print(f"\n{'=' * 20} summary {'=' * 20}", flush=True)
+    print(
+        f"✅ {n_ok} ok, ❌ {n_failed} failed, "
+        f"⏭️ {n_total - n_ok - n_failed} skipped, {elapsed:.2f}s",
+        flush=True,
+    )
+    if n_failed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
