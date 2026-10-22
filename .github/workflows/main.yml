@@ -10,7 +10,9 @@
 name: CI
 
 on:
-  workflow_dispatch: # Manual trigger only, from the GitHub UI
+  schedule:
+    - cron: "*/15 * * * *" # Every 15 minutes (UTC); GitHub may delay or drop runs under load
+  workflow_dispatch: # Allows you to manually trigger the workflow from the GitHub UI
 
 jobs:
   generator:
