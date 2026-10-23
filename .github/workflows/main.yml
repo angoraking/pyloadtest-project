@@ -11,7 +11,7 @@ name: CI
 
 on:
   schedule:
-    - cron: "*/15 * * * *" # Every 15 minutes (UTC); GitHub may delay or drop runs under load
+    - cron: "7,22,37,52 * * * *" # Every 15 minutes (UTC), off the busy :00/:15/:30/:45 marks; GitHub may still delay or drop runs
   workflow_dispatch: # Allows you to manually trigger the workflow from the GitHub UI
 
 jobs:
